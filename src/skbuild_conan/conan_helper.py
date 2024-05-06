@@ -170,6 +170,7 @@ class ConanHelper:
         # redirecting the output to a subfolder. The `cmake_args` makes sure
         # that CMake still finds it.
         cmd += [f"--output-folder={self.generator_folder}"]
+        cmd += [f"--install-folder={self.generator_folder}"]
         # Making sure  the right generators are used.
         cmd += ["-g", "CMakeDeps", "-g", "CMakeToolchain"]
         # profile
