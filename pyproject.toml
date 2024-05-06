@@ -21,7 +21,7 @@ classifiers = [
     "Development Status :: 3 - Alpha",
 ]
 dependencies = [
-    "conan>=2.0.0",
+    "conan<2.0.0",
     "scikit-build>=0.17.3",
     "setuptools",
     "cmake>=3.23",
