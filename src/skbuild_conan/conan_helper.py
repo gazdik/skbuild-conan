@@ -1,13 +1,14 @@
+import io
 import json
+import os
 import subprocess
 import sys
-import os
 import typing
-import io
 from contextlib import redirect_stdout
 
-from conan.cli.cli import Cli as ConanCli
-from conan.api.conan_api import ConanAPI
+from conans.client.command import Command
+from conans.client.conan_api import Conan
+
 
 class EnvContextManager:
     """
@@ -61,7 +62,6 @@ class ConanHelper:
                                               os.environ.get("CONAN_DEFAULT_PROFILE", "default"))
         if env:
             self._log(f"Temporarily overriding environment variables: {env}")
-        self._check_conan_version()
 
 
     def _log(self, msg: str):
@@ -74,15 +74,13 @@ class ConanHelper:
         self._log(printable_cmd)
 
         f = io.StringIO()
-        conan_api = ConanAPI()
-        conan_cli = ConanCli(conan_api)
-        with redirect_stdout(f):
-            with EnvContextManager(self.env):
-                try:
-                    conan_cli.run(cmd)
-                except BaseException as e:
-                    error = conan_cli.exception_exit_error(e)
-                    raise
+
+        conan_api, _, _ = Conan.factory()
+        conan_cli = Command(conan_api)
+        with redirect_stdout(f), EnvContextManager(self.env):
+            error = conan_cli.run(cmd)
+            if error != 0:
+                raise Exception(f.getvalue())
         out = f.getvalue()
         self._log(out)
         return out
@@ -91,12 +89,6 @@ class ConanHelper:
         args = ["-v"]
         version = self._conan_cli(args).split(" ")[-1]
         return version
-
-    def _check_conan_version(self):
-        self._log("Checking Conan version...")
-        version = self.conan_version()
-        if version[0] != "2":
-            raise RuntimeError(f"Conan 2 required. Current version {version}.")
 
     def _conan_to_json(self, args: typing.List[str]):
         """
