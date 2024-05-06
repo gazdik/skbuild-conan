@@ -1,10 +1,9 @@
 import io
 import json
 import os
-import subprocess
-import sys
+import tempfile
 import typing
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 
 from conans.client.command import Command
 from conans.client.conan_api import Conan
@@ -74,13 +73,14 @@ class ConanHelper:
         self._log(printable_cmd)
 
         f = io.StringIO()
+        e = io.StringIO()
 
         conan_api, _, _ = Conan.factory()
         conan_cli = Command(conan_api)
-        with redirect_stdout(f), EnvContextManager(self.env):
+        with redirect_stdout(f), redirect_stderr(e), EnvContextManager(self.env):
             error = conan_cli.run(cmd)
             if error != 0:
-                raise Exception(f.getvalue())
+                raise Exception(e.getvalue())
         out = f.getvalue()
         self._log(out)
         return out
@@ -95,7 +95,10 @@ class ConanHelper:
         Runs conan with the args and parses the output as json.
         """
         args = args
-        data = json.loads(self._conan_cli(args))
+        with tempfile.NamedTemporaryFile() as temp:
+            self._conan_cli([*args, "-j", temp.name])
+            temp.seek(0)
+            data = json.loads(temp.read())
         return data
 
     def install_from_paths(self, paths: typing.List[str]):
@@ -108,9 +111,9 @@ class ConanHelper:
             self._log(f"Installing {path}...")
             if not os.path.exists(path):
                 raise RuntimeError(f"Conan recipe '{path}' does not exist.")
-            package_info = self._conan_to_json(["inspect", "-f", "json", path])
+            package_info = self._conan_to_json(["inspect", path])
             conan_list = self._conan_to_json(
-                ["list", "-c", "-f", "json", package_info["name"]]
+                ["search", package_info["name"]]
             )
             package_id = f"{package_info['name']}/{package_info['version']}"
             if package_id in conan_list["Local Cache"].keys():
@@ -133,7 +136,7 @@ class ConanHelper:
         """
         self._log("Creating conan profile...")
         # check if profile exists or create a default one automatically.
-        profile_list = self._conan_to_json(["profile", "list", "-f", "json"])
+        profile_list = self._conan_to_json(["profile", "list"])
         if self._default_profile_name not in profile_list:
             self._conan_cli(["profile", "detect"])
             if self.profile == self._default_profile_name:
