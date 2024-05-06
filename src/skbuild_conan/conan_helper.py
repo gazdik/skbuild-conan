@@ -138,13 +138,13 @@ class ConanHelper:
         # check if profile exists or create a default one automatically.
         profile_list = self._conan_to_json(["profile", "list"])
         if self._default_profile_name not in profile_list:
-            self._conan_cli(["profile", "detect"])
+            self._conan_cli(["profile", "new", "--detect", "default"])
             if self.profile == self._default_profile_name:
                 return  # default profile is already created
         if self.profile in profile_list:
             self._log("Profile already exists.")
             return  # Profile already exists
-        cmd = ["profile", "detect", "--name", self.profile]
+        cmd = ["profile", "new", "--detect", self.profile]
         self._conan_cli( cmd)
 
     def install(
