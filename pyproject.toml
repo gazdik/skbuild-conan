@@ -22,7 +22,7 @@ classifiers = [
 ]
 dependencies = [
     "conan<2.0.0",
-    "scikit-build>=0.17.3",
+    "scikit-build>=0.16.7",
     "setuptools",
     "cmake>=3.23",
     "ninja"
